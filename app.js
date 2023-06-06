@@ -6,7 +6,7 @@ const screenLine1 = document.getElementById('screen-line-1');
 const screenLine2 = document.getElementById('screen-line-2');
 var numA = 0;
 var numB = 0;
-var line1Text = '';
+var line1Text = 0;
 var line2Text = 0;
 var mathsObj = {'maths': null, 'mathsExp': null};
 var currentEntry = null;
@@ -54,8 +54,8 @@ class screenFuncs {
     varB = numB;
     operatorObj = mathsObj;
     constructor (varA, varB, operatorObj) {
-        this.varA = parseInt(varA);
-        this.varB = parseInt(varB);
+        this.varA = Number(varA);
+        this.varB = Number(varB);
         this.operatorObj = operatorObj;
     }
 
@@ -77,13 +77,27 @@ class screenFuncs {
         } else if (this.operatorObj['maths'] == 'multiple') {
             return this.varA * this.varB;
         } else if (this.operatorObj['maths'] == 'divide') {
-            return this.varA /  this.varB;
+            return this.varA / this.varB;
+        }
+    }
+
+    quickCalc (num, mathsType) {
+        if (mathsType == 'percent') {
+            return num / 100;
+        } else if (mathsType == 'fraction' && num != 0) {
+            return 1 / num;
+        } else if (mathsType == 'power') {
+            return Math.pow(num, 2);
+        } else if (mathsType == 'square-root') {
+            return Math.sqrt(num);
+        } else if (mathsType == 'sign') {
+            return num * (-1);
         }
     }
 
     mathsUpdate (a, b, newOperatorObj) {
-        this.varA = parseInt(a);
-        this.varB = parseInt(b);
+        this.varA = Number(a);
+        this.varB = Number(b);
         this.operatorObj = newOperatorObj;
     }
 
@@ -92,8 +106,14 @@ class screenFuncs {
         screenLine2.innerHTML = line2Text;
     }
 
-    screenUpdate (a, b, newOperatorObj, line1Text, line2Text) {
-        this.mathsUpdate(a, b, newOperatorObj);
+    screenUpdate (a, b, newOperatorObj, line2Text, btnName) {
+        if (btnName == 'ans') {
+            line1Text = this.mathsInText() + " =";
+            this.mathsUpdate(a, b, newOperatorObj);
+        } else {
+            this.mathsUpdate(a, b, newOperatorObj);
+            line1Text = this.mathsInText();
+        }
         this.textLineUpdate(line1Text, line2Text);
     }
 
@@ -101,10 +121,10 @@ class screenFuncs {
         numA = 0;
         numB = 0;
         mathsObj = {'maths': null, 'mathsExp': null};
-        line1Text = '';
         line2Text = 0;
         currentEntry = null;
     }
+
     clearEntry (currentEntry) {
         if (currentEntry == null) {
             this.clear();
@@ -113,6 +133,28 @@ class screenFuncs {
                 numA = 0;
             } else if (currentEntry == 'numB') {
                 numB = 0;
+            }
+            line2Text = 0;
+        }
+    }
+
+    numReduce (num) {
+        let numArr = num.toString().split("");
+        let newNumArr = numArr.toSpliced(numArr.length-1, 1);
+        let newNum = Number(newNumArr.toString());
+        return newNum;
+    }
+
+    backspace (currentEntry) {
+        if (currentEntry == null) {
+            this.clear();
+        } else {
+            if (currentEntry == 'numA') {
+                numA = this.numReduce(numA);
+                line2Text = numA;
+            } else if (currentEntry == 'numB') {
+                numB = this.numReduce(numB);
+                line2Text = numB;
             }
         }
     }
@@ -143,10 +185,16 @@ function mathsUpdate(text, btnType, btnValue) {
         mathsObj.mathsExp = text;
         screenValues.operatorObj = mathsObj;
         currentEntry = 'maths';
+    } else if (btnType == 'operator' && (currentEntry == 'numA' || currentEntry == 'numB')) {
+        if (currentEntry == 'numA') {
+            numA = screenValues.quickCalc(numA, btnValue);
+            line2Text = numA;
+        } else if (currentEntry == 'numB') {
+            numB = screenValues.quickCalc(numB, btnValue);
+            line2Text = numA;
+        }
     }
-    line1Text = screenValues.mathsInText();
-    console.log(line1Text);
-    screenValues.screenUpdate(numA, numB, mathsObj, line1Text, line2Text)
+    screenValues.screenUpdate(numA, numB, mathsObj, line2Text, btnValue);
 }
 
 Array.from(btns).forEach(btn => {
@@ -154,22 +202,20 @@ Array.from(btns).forEach(btn => {
         let btnType = btn.className;
         if (btnType == 'feature') {
             if (btn.value == 'ans') {
-                line1Text = screenValues.mathsInText() + " =";
                 let result = screenValues.calc();
                 line2Text = result;
                 numA = result;
                 numB = 0;
                 mathsObj = {'maths': null, 'mathsExp': null};
                 currentEntry = null;
-                screenValues.screenUpdate(numA, numB, mathsObj, line1Text, line2Text);
             } else if (btn.value == 'clear') {
                 screenValues.clear();
-                screenValues.screenUpdate(numA, numB, mathsObj, line1Text, line2Text);
             } else if (btn.value == 'clear-entry') {
-                console.log(currentEntry);
                 screenValues.clearEntry(currentEntry);
-                screenValues.screenUpdate(numA, numB, mathsObj, line1Text, line2Text);
+            } else if (btn.value == 'backspace') {
+                screenValues.backspace(currentEntry);
             }
+            screenValues.screenUpdate(numA, numB, mathsObj, line2Text, btn.value);
         } else {
             mathsUpdate(btn.innerHTML, btnType, btn.value);
         }
