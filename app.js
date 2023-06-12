@@ -1,4 +1,4 @@
-const numpadButtons = { 'percent': '&#37;', 'clear-entry': 'CE', 'clear': 'C', 'backspace': '&#8592;', 'fraction': '&#185;&#8725;&#8339;', 'square': '&#8339;&#178;', 'square-root': '&#8730;', 'divide': '&#247;', 'seven': 7, 'eight': 8, 'nine': 9, 'multiple': '&#215;', 'four': 4, 'five': 5, 'six': 6, 'subtract': '&#8722;', 'one': 1, 'two': 2, 'three': 3, 'add': '&#43;', 'sign': '&#43;&#8725;&#8722;', 'zero': 0, 'dot': '.', 'ans': '&#61;' };
+const numpadButtons = { 'percent': '&#37;', 'clear-entry': 'CE', 'clear': 'C', 'backspace': '&#8592;', 'fraction': '&#185;&#8725;&#8339;', 'square': '&#8339;&#178;', 'square-root': '&#8730;', 'divide': '&#247;', 'seven': 7, 'eight': 8, 'nine': 9, 'multiple': '&#215;', 'four': 4, 'five': 5, 'six': 6, 'subtract': '&#8722;', 'one': 1, 'two': 2, 'three': 3, 'add': '&#43;', 'sign': '&#43;&#8725;&#8722;', 'zero': 0, 'decimal': '.', 'ans': '&#61;' };
 const numpadNames = Object.keys(numpadButtons);
 const numpadSymbols = Object.values(numpadButtons);
 const userInterface = document.getElementById('user-interfaces');
@@ -12,6 +12,8 @@ var line1Text = 0;
 var line2Text = 0;
 var mathsObj = {'maths': null, 'mathsExp': null};
 var currentEntry = null;
+var isQuickCal = false;
+var isDecimal = false;
 
 
 
@@ -63,7 +65,6 @@ function entryFormat (num) {
     }
 }
 
-
 class screenFuncs {
     varA = numA;
     varB = numB;
@@ -85,13 +86,18 @@ class screenFuncs {
     }
 
     mathsInText_2 (mathsType, num) {
-        if (mathsType == 'fraction') {
-            return `1\\${num}`;
+        if (mathsType == 'fraction' && num != 0) {
+            return `1\/${num}`;
         } else if (mathsType == 'square') {
             return `sqr(${num})`;
         } else if (mathsType == 'square-root') {
             return `&#8730;(${num})`;
-        } 
+        } else if (mathsType == 'percent') {
+            return num / 100;
+        } else if (mathsType == 'decimal' && isDecimal == false) {
+            isDecimal = true;
+            return `${num}.` ;
+        }
     }
 
     calc () {
@@ -118,6 +124,8 @@ class screenFuncs {
             out = Math.sqrt(num);
         } else if (mathsType == 'sign') {
             out = num * (-1);
+        } else if (mathsType == 'decimal') {
+            out = `${num}.`
         }
         return entryFormat(out);
     }
@@ -138,15 +146,19 @@ class screenFuncs {
             line1Text = this.mathsInText(a, b) + " =";
             numA = line2Text;
             this.mathsUpdate(numA, numB, newOperatorObj);
-            // numB = 0;
         } else if (btnName == 'clear' || (btnName == 'clear-entry' && a == 0)) {
             this.mathsUpdate(numA, numB, newOperatorObj);
             line1Text = '';
+        } else if (btnName == 'backspace') {
+            if (newOperatorObj.maths == null) {
+                line1Text = '';
+                line2Text = a;
+                this.mathsUpdate(numA, numB, newOperatorObj);
+            }
         } else {
             this.mathsUpdate(numA, numB, newOperatorObj);
             line1Text = this.mathsInText(a, b);
         }
-        // this.mathsUpdate(numA, numB, newOperatorObj);
         this.textLineUpdate(line1Text, line2Text);
     }
 
@@ -184,15 +196,18 @@ class screenFuncs {
     }
 
     backspace (currentEntry) {
-        if (currentEntry == null) {
-            this.clear();
-        } else {
-            if (currentEntry == 'numA') {
-                numA = this.numReduce(numA);
-                line2Text = numA;
-            } else if (currentEntry == 'numB') {
-                numB = this.numReduce(numB);
-                line2Text = numB;
+        if (!isQuickCal) {
+            if (currentEntry == null) {
+                numB = 0;
+                mathsObj = {'maths': null, 'mathsExp': null};
+            } else {
+                if (currentEntry == 'numA') {
+                    numA = this.numReduce(numA);
+                    line2Text = numA;
+                } else if (currentEntry == 'numB') {
+                    numB = this.numReduce(numB);
+                    line2Text = numB;
+                }
             }
         }
     }
@@ -201,13 +216,12 @@ class screenFuncs {
 const screenValues = new screenFuncs(numA, numB, mathsObj);
 
 function mathsUpdate(text, btnType, btnValue) {
-    let currentDisplay = screenLine1.innerHTML;
-    let textLen = currentDisplay.length;
+    let currentDisplay = Number(screenLine2.innerHTML);
     numAinText = numA;
     numBinText = numB;
     if (btnType == 'numpad') {
         let numValue = parseInt(text);
-        if (!isNaN(currentDisplay)) {
+        if (currentEntry == null) {
             numA = numA * 10 + numValue;
             screenValues.varA = numA;
             currentEntry = 'numA';
@@ -222,24 +236,40 @@ function mathsUpdate(text, btnType, btnValue) {
                 numBinText = numB;
             }
         }
-    } else if (btnType == 'basicCals' && textLen > 0) {
+        isQuickCal = false;
+    } else if (btnType == 'basicCals' && currentDisplay != 0) {
         mathsObj.maths = btnValue;
         mathsObj.mathsExp = text;
         screenValues.operatorObj = mathsObj;
         currentEntry = 'maths';
         numB = 0;
         numBinText = 0;
+        isQuickCal = false;
+        if (numA % 1 == 0) {
+            numA = parseInt(numA);
+            numAinText = numA;
+        }
+        line2Text = numA;
+        
     } else if (btnType == 'operator' && (currentEntry == 'numA' || currentEntry == 'numB')) {
         if (currentEntry == 'numA') {
             numAinText = screenValues.mathsInText_2(btnValue, numA);
             numA = screenValues.quickCalc(numA, btnValue);
             line2Text = numA;
+            if (btnValue == 'decimal') {
+                numA = parseFloat(numA).toFixed(1);
+            }
         } else if (currentEntry == 'numB') {
             numBinText = screenValues.mathsInText_2(btnValue, numB);
             numB = screenValues.quickCalc(numB, btnValue);
-            line2Text = numA;
+            line2Text = numB;
+            if (btnValue == 'decimal') {
+                numB = parseFloat(numB).toFixed(1);
+            }
         }
+        isQuickCal = true;
     }
+    console.log(currentEntry)
     screenValues.screenUpdate(numAinText, numBinText, mathsObj, line2Text, btnValue);
 }
 
@@ -250,8 +280,7 @@ Array.from(btns).forEach(btn => {
             if (btn.value == 'ans') {
                 let result = screenValues.calc();
                 line2Text = result;
-                // mathsObj = {'maths': null, 'mathsExp': null};
-                currentEntry = 'numA';
+                currentEntry = null;
             } else if (btn.value == 'clear') {
                 screenValues.clear();
             } else if (btn.value == 'clear-entry') {
@@ -265,14 +294,15 @@ Array.from(btns).forEach(btn => {
             screenValues.screenUpdate(numA, numB, mathsObj, line2Text, btn.value);
         } else {
             if (btnType == 'operator') {
-                currentEntry = 'numA';
-                mathsObj = {'maths': null, 'mathsExp': null};
-                numB = 0;
+                if (btn.value != 'decimal') {
+                    currentEntry = 'numA';
+                    mathsObj = {'maths': null, 'mathsExp': null};
+                    numB = 0;
+                }
             }
             mathsUpdate(btn.innerHTML, btnType, btn.value);
         }
         console.log(screenValues);
-        console.log(currentEntry)
     })
 })
 
