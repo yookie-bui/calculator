@@ -47,6 +47,10 @@ for (let i = 0; i < 6; i += 1) {
         } else if (basicCals.includes(numpadName)) {
             btn.className = 'basicCals';
         }
+
+        if (numpadName == 'decimal') {
+            btn.className = 'decimal';
+        }
         row.appendChild(btn);
     }
     userInterface.appendChild(row);
@@ -63,6 +67,19 @@ function entryFormat (num) {
             return Math.round(num * 10000000000) / 10000000000;
         }
     }
+}
+
+function addDecimalPlaces (num, decimalNum) {
+    let newNum = 0;
+    let remainder = Number(num) % 1;
+    let decimalPlaces = num.toString().split(".")[1].length;
+    if (decimalPlaces == 1 && remainder == 0) {
+        decimalPlaces = decimalPlaces
+    } else {
+        decimalPlaces += 1;
+    }
+    newNum = Number(num) + decimalNum / Math.pow(10, decimalPlaces);
+    return Number(newNum.toFixed(decimalPlaces));
 }
 
 class screenFuncs {
@@ -94,9 +111,13 @@ class screenFuncs {
             return `&#8730;(${num})`;
         } else if (mathsType == 'percent') {
             return num / 100;
-        } else if (mathsType == 'decimal' && isDecimal == false) {
-            isDecimal = true;
-            return `${num}.` ;
+        } else if (mathsType == 'decimal') {
+            if (isDecimal == false) {
+                return `${num}.` ;
+            } else {
+                return num;
+            }
+           
         }
     }
 
@@ -109,6 +130,8 @@ class screenFuncs {
             return this.varA * this.varB;
         } else if (this.operatorObj['maths'] == 'divide') {
             return this.varA / this.varB;
+        } else {
+            return this.varA;
         }
     }
 
@@ -125,7 +148,7 @@ class screenFuncs {
         } else if (mathsType == 'sign') {
             out = num * (-1);
         } else if (mathsType == 'decimal') {
-            out = `${num}.`
+            out = parseFloat(num).toFixed(1);
         }
         return entryFormat(out);
     }
@@ -142,10 +165,29 @@ class screenFuncs {
     }
 
     screenUpdate (a, b, newOperatorObj, line2Text, btnName) {
+        if (Number(a) % 1 == 0) {
+            a = parseInt (a);
+        } 
+
+        if (Number(b) % 1 == 0 ) {
+            b = parseInt (b);
+        }
         if (btnName == 'ans') {
-            line1Text = this.mathsInText(a, b) + " =";
-            numA = line2Text;
-            this.mathsUpdate(numA, numB, newOperatorObj);
+            if (currentEntry == 'numB') {
+                currentEntry = null;
+                line1Text = this.mathsInText(a, b) + " =";
+                numA = line2Text;
+                numB = 0;
+                this.mathsUpdate(numA, numB, newOperatorObj);
+            } else if (currentEntry == 'numA') {
+                currentEntry = null;
+                numA = line2Text;
+                numB = 0;
+                this.mathsUpdate(numA, numB, newOperatorObj);
+            } else {
+                isDecimal = false;
+                isQuickCal = false;
+            }
         } else if (btnName == 'clear' || (btnName == 'clear-entry' && a == 0)) {
             this.mathsUpdate(numA, numB, newOperatorObj);
             line1Text = '';
@@ -170,6 +212,8 @@ class screenFuncs {
         mathsObj = {'maths': null, 'mathsExp': null};
         line2Text = 0;
         currentEntry = null;
+        isDecimal = false;
+        isQuickCal = false;
     }
 
     clearEntry (currentEntry) {
@@ -221,15 +265,29 @@ function mathsUpdate(text, btnType, btnValue) {
     numBinText = numB;
     if (btnType == 'numpad') {
         let numValue = parseInt(text);
-        if (currentEntry == null) {
-            numA = numA * 10 + numValue;
+        if (currentEntry == 'numA') {
+            if (!isDecimal) {
+                numA = numA * 10 + numValue;
+            } else {
+                numA = addDecimalPlaces(numA, numValue);
+            }
+            screenValues.varA = numA;
+            currentEntry = 'numA';
+            line2Text = numA;
+            numAinText = numA;
+        } else if (currentEntry == null) {
+            numA = numValue;
             screenValues.varA = numA;
             currentEntry = 'numA';
             line2Text = numA;
             numAinText = numA;
         } else {
             if (mathsObj.maths != null) {
-                numB = numB * 10 + numValue;
+                if (!isDecimal) {
+                    numB = numB * 10 + numValue;
+                } else {
+                    numB = addDecimalPlaces(numB, numValue)
+                }
                 screenValues.varB = numB;
                 currentEntry = 'numB';
                 line2Text = numB;
@@ -238,6 +296,11 @@ function mathsUpdate(text, btnType, btnValue) {
         }
         isQuickCal = false;
     } else if (btnType == 'basicCals' && currentDisplay != 0) {
+        if (currentEntry == 'numA' && (numA % 1 == 0)) {
+            line2Text = parseInt(numA);
+        } else if (currentEntry == 'numB' && (numB % 1 == 0)) {
+            line2Text = pasrseInt(numB);
+        }
         mathsObj.maths = btnValue;
         mathsObj.mathsExp = text;
         screenValues.operatorObj = mathsObj;
@@ -245,30 +308,39 @@ function mathsUpdate(text, btnType, btnValue) {
         numB = 0;
         numBinText = 0;
         isQuickCal = false;
-        if (numA % 1 == 0) {
-            numA = parseInt(numA);
-            numAinText = numA;
-        }
-        line2Text = numA;
+        isDecimal = false;
         
-    } else if (btnType == 'operator' && (currentEntry == 'numA' || currentEntry == 'numB')) {
+    } else if ((btnType == 'operator') && (currentEntry == 'numA' || currentEntry == 'numB')) {
         if (currentEntry == 'numA') {
             numAinText = screenValues.mathsInText_2(btnValue, numA);
             numA = screenValues.quickCalc(numA, btnValue);
             line2Text = numA;
-            if (btnValue == 'decimal') {
-                numA = parseFloat(numA).toFixed(1);
-            }
         } else if (currentEntry == 'numB') {
             numBinText = screenValues.mathsInText_2(btnValue, numB);
             numB = screenValues.quickCalc(numB, btnValue);
             line2Text = numB;
-            if (btnValue == 'decimal') {
-                numB = parseFloat(numB).toFixed(1);
-            }
         }
         isQuickCal = true;
-    }
+    } else if (btnType == 'decimal') {
+        if (currentEntry == 'numA') {
+            numAinText = screenValues.mathsInText_2(btnValue, numA);
+            numA = screenValues.quickCalc(numA, btnValue);
+            line2Text = numAinText;
+        } else if (currentEntry == 'numB') {
+            numBinText = screenValues.mathsInText_2(btnValue, numB);
+            numB = screenValues.quickCalc(numB, btnValue);
+            line2Text = numBinText;
+        } else if (currentEntry == null || currentEntry == 'maths') {
+            numB = 0;
+            numBinText = 0;    
+            currentEntry = 'numA';
+            numAinText = screenValues.mathsInText_2(btnValue, numA);
+            numA = screenValues.quickCalc(numA, btnValue);
+            line2Text = numAinText;
+            mathsObj = {'maths': null, 'mathsExp': null};
+        }
+        isDecimal = true;
+    } 
     console.log(currentEntry)
     screenValues.screenUpdate(numAinText, numBinText, mathsObj, line2Text, btnValue);
 }
@@ -280,7 +352,13 @@ Array.from(btns).forEach(btn => {
             if (btn.value == 'ans') {
                 let result = screenValues.calc();
                 line2Text = result;
-                currentEntry = null;
+                isQuickCal = false;
+                mathsObj = {'maths': null, 'mathsExp': null};
+                if (result % 1 == 0) {
+                    isDecimal = false;
+                } else {
+                    isDecimal = true;
+                }
             } else if (btn.value == 'clear') {
                 screenValues.clear();
             } else if (btn.value == 'clear-entry') {
@@ -294,7 +372,7 @@ Array.from(btns).forEach(btn => {
             screenValues.screenUpdate(numA, numB, mathsObj, line2Text, btn.value);
         } else {
             if (btnType == 'operator') {
-                if (btn.value != 'decimal') {
+                if (currentEntry == null) {
                     currentEntry = 'numA';
                     mathsObj = {'maths': null, 'mathsExp': null};
                     numB = 0;
