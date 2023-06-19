@@ -36,6 +36,8 @@ for (let i = 0; i < 6; i += 1) {
         let numpadName = numpadNames[index];
         btn.name = numpadName;
         btn.innerHTML = numpadValue;
+        // btn.setAttribute('onclick', 'toggleOperButtons()');
+        btn.disabled = false;
         if (!(isNaN(numpadValue))) {
             btn.value = numpadValue;
             btn.className = 'numpad';
@@ -90,23 +92,17 @@ function addDecimalPlaces (num, decimalNum) {
 }
 
 function toggleOperButtons () {
-    let operatorBtns = document.querySelectorAll('.operator,.decimal,.basicCals');
+    var operatorBtns = document.querySelectorAll('.operator,.decimal,.basicCals');
     if (invalidOperator) {
         Array.from(operatorBtns).forEach(btn => {
-            btn.setAttribute("disabled", "")
+            btn.setAttribute('disabled', "");
         })
     } else {
         Array.from(operatorBtns).forEach(btn => {
-            btn.removeAttribute("disabled")
+            btn.disabled = false;
         })
     }
 }
-// function disabledButton () {
-//     let operatorBtns = document.querySelectorAll('.operator,.decimal,.basicCals');
-//     Array.from(operatorBtns).forEach(btn => {
-//             btn.setAttribute("disabled", "")
-//         })
-// }
 
 
 class screenFuncs {
@@ -195,12 +191,13 @@ class screenFuncs {
     textLineUpdate (text1, text2) {
         screenLine1.innerHTML = text1;
         screenLine2.innerHTML = text2;
+        line1Text = text1;
+        line2Text = text2;
     }
 
     screenUpdate (a, b, newOperatorObj, text2, btnName) {
-        console.log(invalidOperator)
-        toggleOperButtons();
         let text1 = '';
+        toggleOperButtons();
         if (!invalidOperator) {
             if (Math.abs(Number(a) % 1) == 0) {
                 a = parseInt (a);
@@ -247,7 +244,6 @@ class screenFuncs {
             this.mathsUpdate(numA, numB, newOperatorObj);
             this.textLineUpdate(text1, text2);
         }
-        toggleOperButtons();
     }
 
     clear () {
@@ -284,26 +280,58 @@ class screenFuncs {
         isDecimal = false;
     }
 
+
+
     numReduce (num) {
-        let numArr = num.toString().split("");
-        let newNumArr = numArr.toSpliced(numArr.length-1, 1);
-        let newNum = Number(newNumArr.toString());
-        let out = entryFormat(newNum);
+        let numArr = "";
+        let newNumArr = [];
+        let newNum = 0; 
+        let out = 0;
+        numArr = num.toString().split("");
+        newNumArr = numArr.toSpliced(numArr.length-1, 1);
+        newNum = Number(newNumArr.join(""));
+        console.log(newNum);
+        out = entryFormat(newNum);
+        return out;
+    }
+
+    backspacePerformance (num) {
+        let out = 0;
+        if (!isDecimal) {
+            out = this.numReduce(num);
+        } else {
+            let numArr = num.toString().split(".");
+            let decimalValue = Number(numArr[1]);
+            console.log(decimalValue);
+            if (decimalValue == 0) {
+                out = Number(numArr[0]);
+            } else {
+                numArr[1] = this.numReduce(decimalValue);
+                out = Number(numArr.join("."));
+            }
+            if (out % 1 == 0){
+                isDecimal = false;
+            }
+        }
         return out;
     }
 
     backspace (currentEntry) {
-        if (!isQuickCal) {
-            if (currentEntry == null) {
-                numB = 0;
-                mathsObj = {'maths': null, 'mathsExp': null};
-            } else {
-                if (currentEntry == 'numA') {
-                    numA = this.numReduce(numA);
-                    line2Text = numA;
-                } else if (currentEntry == 'numB') {
-                    numB = this.numReduce(numB);
-                    line2Text = numB;
+        if(line1Text.length == 0) {
+            this.clear();
+        } else {
+            if (!isQuickCal) {
+                if (currentEntry == null) {
+                    numB = 0;
+                    mathsObj = {'maths': null, 'mathsExp': null};
+                } else {
+                    if (currentEntry == 'numA') {
+                        numA = this.backspacePerformance(numA);
+                        line2Text = numA;
+                    } else if (currentEntry == 'numB') {
+                        numB = this.backspacePerformance(numB);
+                        line2Text = numB;
+                    }
                 }
             }
         }
@@ -369,7 +397,6 @@ function mathsUpdate(text, btnType, btnValue) {
             numAinText = screenValues.mathsInText_2(btnValue, numA);
             numA = screenValues.quickCalc(numA, btnValue);
             line2Text = numA;
-            console.log(numAinText)
         } else if (currentEntry == 'numB') {
             numBinText = screenValues.mathsInText_2(btnValue, numB);
             numB = screenValues.quickCalc(numB, btnValue);
@@ -404,8 +431,8 @@ function mathsUpdate(text, btnType, btnValue) {
         }
         isDecimal = true;
     } 
-    console.log(currentEntry);
-    console.log({isDecimal, isNegative, isQuickCal, invalidOperator});
+    // console.log(currentEntry);
+    // console.log({isDecimal, isNegative, isQuickCal, invalidOperator});
     screenValues.screenUpdate(numAinText, numBinText, mathsObj, line2Text, btnValue);
 }
 
@@ -439,6 +466,13 @@ Array.from(btns).forEach(btn => {
                 if (currentEntry == null) {
                     currentEntry = 'numA';
                     mathsObj = {'maths': null, 'mathsExp': null};
+                    numB = 0;
+                }
+            } else if (btnType == 'basicCals') {
+                if (currentEntry == 'numB') {
+                    numA = screenValues.calc();
+                    console.log(numA);
+                    currentEntry = 'numA';
                     numB = 0;
                 }
             }
