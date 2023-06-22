@@ -56,11 +56,17 @@ for (let i = 0; i < 6; i += 1) {
 
         if (numpadName == 'decimal') {
             btn.className = 'decimal';
+            btn.style.color = 'black';
         }
 
         if (numpadName == 'ans') {
             // btn.style.backgroundColor = '#8bb3fb'
             btn.style.backgroundColor = '#FF5B46';
+            btn.style.color = 'white';
+        }
+
+        if (numpadName == 'sign') {
+            btn.style.color = 'black';
         }
 
         // if (numpadName == 'clear' || numpadName == 'clear-entry') {
