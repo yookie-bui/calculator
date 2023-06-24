@@ -85,7 +85,10 @@ function entryFormat (num) {
         if (num.toString().length < 11) {
             return num
         } else {
-            return Math.round(num * 10000000000) / 10000000000;
+            let numArr = num.toString().split("");
+            let startIndex = numArr.length - 11;
+            let newNumArr = numArr.toSpliced(startIndex, startIndex);
+            return Number(newNumArr.join(""));
         }
     }
 }
@@ -206,10 +209,11 @@ class screenFuncs {
     }
 
     textLineUpdate (text1, text2) {
+        let formatText2 = entryFormat(Number(text2));
         screenLine1.innerHTML = text1;
-        screenLine2.innerHTML = text2;
+        screenLine2.innerHTML = formatText2;
         line1Text = text1;
-        line2Text = text2;
+        line2Text = formatText2;
     }
 
     screenUpdate (a, b, newOperatorObj, text2, btnName) {
@@ -450,6 +454,7 @@ function mathsUpdate(text, btnType, btnValue) {
     } 
     // console.log(currentEntry);
     // console.log({isDecimal, isNegative, isQuickCal, invalidOperator});
+    // line2Text = entryFormat(Number(line2Text));
     screenValues.screenUpdate(numAinText, numBinText, mathsObj, line2Text, btnValue);
 }
 
