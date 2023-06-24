@@ -12,6 +12,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    background-color:#fbe9a0;
 }
 /* main {
     width: 22vmax;
@@ -105,6 +106,7 @@ button:hover {
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
+    margin: 0;
 }
 
 .feature,
@@ -115,13 +117,18 @@ button:hover {
     color: #949494;
 }
 
+/* .form-switch .form-check-input {
+    width: 20%;
+    height: 100%;
+} */
+
 @media only screen and (max-width: 390px) {
     main {
         width: 100vw;
         margin-left: 0;
         margin-right: 0;
         height: 100vh;
-        padding: 0;
+        /* padding: 0; */
     }
     body {
         margin: 0;
